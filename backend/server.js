@@ -1,21 +1,27 @@
-const connectDB = require('./config/db');
 const express = require('express');
 const dotenv = require('dotenv');
 const helmet = require('helmet');
 const cors = require('cors');
+const connectDB = require('./config/db');
+const authRoutes = require('./routes/authRoutes');
 
-// Load secret keys
+// Load env vars
 dotenv.config();
+
+// Connect to Database
 connectDB();
 
 const app = express();
 
-// Security Guard (Middlewares)
+// Security & Body Parser Middleware
 app.use(helmet()); 
 app.use(cors());
-app.use(express.json());
+app.use(express.json()); // Essential for reading Postman data
 
-// Test Route
+// Mount Routes
+app.use('/api/auth', authRoutes);
+
+// Basic Test Route
 app.get('/', (req, res) => {
     res.send('Hazara University Backend is Running!');
 });
