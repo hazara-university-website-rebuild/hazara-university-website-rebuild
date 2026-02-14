@@ -24,11 +24,12 @@ exports.register = async (req, res) => {
 };
 
 // @desc    Login user & get token
+// @route   POST /api/auth/login
 exports.login = async (req, res) => {
     try {
         const { email, password } = req.body;
 
-        // 1. Check for user and include password for comparison
+        // 1. Check for user
         const user = await User.findOne({ email }).select('+password');
         if (!user) {
             return res.status(401).json({ success: false, message: 'Invalid credentials' });
@@ -40,10 +41,32 @@ exports.login = async (req, res) => {
             return res.status(401).json({ success: false, message: 'Invalid credentials' });
         }
 
-        // 3. Generate Token
-        const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '30d' });
+        // 3. Create Access Token (Short term - 15 mins)
+        const accessToken = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
+            expiresIn: '15m'
+        });
 
-        res.status(200).json({ success: true, token });
+        // 4. Create Refresh Token (Long term - 7 days)
+        const refreshToken = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
+            expiresIn: '7d'
+        });
+
+        // 5. Send Refresh Token in a secure cookie
+        const options = {
+            expires: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+            httpOnly: true, // Secure: JS cannot touch this cookie
+            secure: process.env.NODE_ENV === 'production' ? true : false
+        };
+
+        res.status(200).cookie('refreshToken', refreshToken, options).json({
+            success: true,
+            accessToken,
+            user: {
+                id: user._id,
+                name: user.name,
+                role: user.role
+            }
+        });
     } catch (error) {
         res.status(500).json({ success: false, error: error.message });
     }
