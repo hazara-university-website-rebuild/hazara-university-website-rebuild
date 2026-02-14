@@ -23,6 +23,10 @@ const userSchema = new mongoose.Schema({
         minlength: 6,
         select: false // This hides the password from API results by default for safety
     },
+    tokenVersion: {
+        type: Number,
+        default: 0 // Every new user starts at Version 0
+    },
     createdAt: {
         type: Date,
         default: Date.now

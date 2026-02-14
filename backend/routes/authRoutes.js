@@ -8,6 +8,9 @@ const { protect, authorize } = require('../middleware/authMiddleware');
 // --- PUBLIC ROUTES (Anyone can visit these) ---
 router.post('/register', register);
 router.post('/login', login);
+router.get('/logout', logout);
+// 'protect' ensures only the actual owner can kill their own sessions
+router.get('/logoutall', protect, logoutAll);
 
 // --- PRIVATE/ADMIN ROUTES (Only certain people can visit) ---
 
