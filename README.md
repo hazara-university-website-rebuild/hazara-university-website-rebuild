@@ -63,5 +63,3 @@ MIT License — for educational and academic use
 ├── assets/         # Optimized images, logos, and static resources
 └── README.md       # Project overview
 
-
->>>>>>> 8a406efdb12a1942d2029cc386f46b663bd93476
