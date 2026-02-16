@@ -48,7 +48,7 @@ export const login = async (email, password) => {
   if (!user) throw new Error("Invalid credentials");
 
   // 2️⃣ Compare password
-  const isMatch = User.comparePassword(password);
+  const isMatch = await user.comparePassword(password);
   if (!isMatch) throw new Error("Invalid credentials");
 
   const sessionId = generateSessionId();

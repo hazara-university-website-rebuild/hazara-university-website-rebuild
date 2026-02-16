@@ -1,4 +1,4 @@
-import { logoutService, logoutAllService, register,refreshTokenService } from "./auth.service.js";
+import { logoutService, logoutAllService, register,refreshTokenService,login } from "./auth.service.js";
 import { setCookie, clearCookie} from "../../utils/cookie.js";
 import { parseExpiresToSeconds } from "../../utils/token.js"
 
@@ -93,7 +93,7 @@ export const refreshToken = async (req, res) => {
     }
 
     // Call service
-    const { accessToken, refreshToken: newRefreshToken, sessionId, userId } = refreshTokenService(refreshTokenCookie);
+    const { accessToken, refreshToken: newRefreshToken} = refreshTokenService(refreshTokenCookie);
 
     // Set new refresh token in HTTP-only cookie
     const refreshTtlSeconds = parseExpiresToSeconds(process.env.JWT_REFRESH_EXPIRES);
