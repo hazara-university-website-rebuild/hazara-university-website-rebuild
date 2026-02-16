@@ -10,28 +10,28 @@ import { generateSessionId,saveSession,getSession,deleteAllSessions,deleteSessio
  * @returns {object} { user, accessToken, refreshToken, sessionId }
  */
 export const register = async (name, email, password) => {
+  
   // 1️⃣ Check if user already exists
   const existingUser = await User.findOne({ email });
 
   // TODO proper error handling
   if (existingUser) throw new Error("Email is already registered");
 
-  // 3️⃣ Create user
   const user = await User.create({ name, email, password});
 
-  // 5️⃣ Generate unique session id
+
   const sessionId = generateSessionId();
+  // 3️⃣ Generate access token
+  const accessToken = generateAccessToken( user._id, user.role );
+  // 4️⃣ Generate refresh token
+  const refreshToken = generateRefreshToken(user._id,user.role, sessionId );
 
-  // 6️⃣ Calculate TTL from refresh token expiry
   const ttl = parseExpiresToSeconds(process.env.JWT_REFRESH_EXPIRES);
-
-  // 4️⃣ Generate tokens
-  const accessToken = generateAccessToken({ id: user._id, role: user.role });
-  const refreshToken = generateRefreshToken({ id: user._id,sessionId});
 
   // 7️⃣ Store refresh token in Redis
   await saveSession(user._id.toString(), sessionId, refreshToken, ttl);
 
+  
   return { user, accessToken, refreshToken, sessionId };
 };
 
@@ -48,21 +48,21 @@ export const login = async (email, password) => {
   if (!user) throw new Error("Invalid credentials");
 
   // 2️⃣ Compare password
-  const isMatch = User.comparePassword(password);
+  const isMatch = await user.comparePassword(password);
   if (!isMatch) throw new Error("Invalid credentials");
 
   const sessionId = generateSessionId();
   // 3️⃣ Generate access token
-  const accessToken = generateAccessToken({ id: user._id, role: user.role });
+  const accessToken = generateAccessToken( user._id, user.role );
   // 4️⃣ Generate refresh token
-  const refreshToken = generateRefreshToken({ id: user._id, sessionId });
+  const refreshToken = generateRefreshToken( user._id,user.role, sessionId);
 
   // 5️⃣ Store refresh token in Redis with TTL
   const ttl = parseExpiresToSeconds(process.env.JWT_REFRESH_EXPIRES);
   await saveSession(user._id.toString(), sessionId, refreshToken, ttl);
 
   // 6️⃣ Return data
-  return { user, accessToken, refreshToken, sessionId };
+  return { user, accessToken, refreshToken};
 };
 
 
@@ -73,21 +73,19 @@ export const login = async (email, password) => {
  * @param {string} refreshToken
  * @returns {Object} { accessToken, refreshToken, sessionId, userId }
  */
-export const refreshTokenService = async (refreshToken) => {
-  try {
+export const refreshTokenService = async (refreshTokenCookie) => {
     // 1️⃣ Verify refresh token
-    const payload = verifyRefreshToken(refreshToken);
-    const { id: userId, sessionId } = payload;
+    const { userId, role, sessionId } = verifyRefreshToken(refreshTokenCookie);
 
     // 2️⃣ Check Redis for valid session
     const storedToken = await getSession(userId, sessionId);
-    if (!storedToken || storedToken !== refreshToken) {
+    if (!storedToken || storedToken !== refreshTokenCookie) {
       throw new Error("Invalid or expired session");
     }
 
     // 3️⃣ Generate new tokens
-    const newAccessToken = generateAccessToken({ id: userId }); // add role if needed
-    const newRefreshToken = generateRefreshToken({ id: userId, sessionId });
+    const newAccessToken = generateAccessToken(userId,role); // add role if needed
+    const newRefreshToken = generateRefreshToken(userId,role, sessionId );
 
     // 4️⃣ Store new refresh token in Redis (rotate token)
     const ttl = parseExpiresToSeconds(process.env.JWT_REFRESH_EXPIRES);
@@ -95,14 +93,8 @@ export const refreshTokenService = async (refreshToken) => {
 
     return {
       accessToken: newAccessToken,
-      refreshToken: newRefreshToken,
-      sessionId,
-      userId,
+      refreshToken: newRefreshToken
     };
-  } catch (err) {
-    //TODO centralized error handling
-    throw new Error("Refresh token invalid or expired");
-  }
 };
 
 
@@ -113,10 +105,10 @@ export const refreshTokenService = async (refreshToken) => {
  * Logout from current session
  * @param {string} refreshToken
  */
-export const logoutService = async (refreshToken) => {
+export const logoutService = async (refreshTokenCookie) => {
   try {
-    const payload = verifyRefreshToken(refreshToken);
-    const { id: userId, sessionId } = payload;
+    const payload = verifyRefreshToken(refreshTokenCookie);
+    const {userId,role, sessionId} = payload;
     await deleteSession(userId, sessionId);
   } catch (err) {
     throw new Error("Invalid refresh token");
@@ -127,10 +119,9 @@ export const logoutService = async (refreshToken) => {
  * Logout from all sessions
  * @param {string} refreshToken
  */
-export const logoutAllService = async (refreshToken) => {
+export const logoutAllService = async (refreshTokenCookie) => {
   try {
-    const payload = verifyRefreshToken(refreshToken);
-    const { id: userId, sessionId } = payload;
+    const {userId} = verifyRefreshToken(refreshTokenCookie);
     await deleteAllSessions(userId);
   } catch (err) {
     throw new Error("Invalid refresh token");

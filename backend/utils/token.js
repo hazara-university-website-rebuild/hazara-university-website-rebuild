@@ -4,8 +4,11 @@ import jwt from "jsonwebtoken";
  * Generate JWT Access Token
  * @param {Object} payload - data to encode
  */
-export const generateAccessToken = (payload) => {
-  return jwt.sign(payload, process.env.JWT_ACCESS_SECRET, {
+export const generateAccessToken = (userId,role) => {
+  return jwt.sign({
+    userId,
+    role
+  }, process.env.JWT_ACCESS_SECRET, {
     expiresIn: process.env.JWT_ACCESS_EXPIRES || "15m",
   });
 };
@@ -15,8 +18,12 @@ export const generateAccessToken = (payload) => {
  * Generate JWT Refresh Token
  * @param {Object} payload - data to encode
  */
-export const generateRefreshToken = (payload) => {
-  return jwt.sign(payload, process.env.JWT_REFRESH_SECRET, {
+export const generateRefreshToken = (userId, role, sessionId) => {
+  return jwt.sign({
+    userId,
+    role,
+    sessionId
+  }, process.env.JWT_REFRESH_SECRET, {
     expiresIn: process.env.JWT_REFRESH_EXPIRES || "7d",
   });
 };

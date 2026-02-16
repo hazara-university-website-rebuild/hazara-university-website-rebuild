@@ -1,4 +1,4 @@
-import { logoutService, logoutAllService, register,refreshTokenService } from "./auth.service.js";
+import { logoutService, logoutAllService, register,refreshTokenService,login } from "./auth.service.js";
 import { setCookie, clearCookie} from "../../utils/cookie.js";
 import { parseExpiresToSeconds } from "../../utils/token.js"
 
@@ -16,8 +16,7 @@ export const registerUser = async (req, res) => {
     // Set HTTP-only cookie for refresh token
     const refreshTtlSeconds = parseExpiresToSeconds(process.env.JWT_REFRESH_EXPIRES);
     setCookie(res, "refreshToken", refreshToken, refreshTtlSeconds);
-
-
+    
     // Set HTTP-only cookie for refresh token
     const accessTtlSeconds = parseExpiresToSeconds(process.env.JWT_ACCESS_EXPIRES);
     setCookie(res, "accessToken", accessToken, accessTtlSeconds);
@@ -49,23 +48,23 @@ export const loginUser = async (req, res) => {
 
     // Call login service
     // Expects { user, accessToken, refreshToken, sessionId }
-    const { user, accessToken, refreshToken, sessionId } = await login(email, password);
+    const { user, accessToken, refreshToken} = await login(email, password);
 
     // Set HTTP-only cookie for refresh token
     const refreshTtlSeconds = parseExpiresToSeconds(process.env.JWT_REFRESH_EXPIRES);
     setCookie(res, "refreshToken", refreshToken, refreshTtlSeconds);
+
+    const accessTtlSeconds = parseExpiresToSeconds(process.env.JWT_ACCESS_EXPIRES);
+    setCookie(res, "accessToken", accessToken, accessTtlSeconds);
 
     // Return success response with access token and sessionId
     res.status(200).json({
       success: true,
       message: "User logged in successfully",
       data: {
-        userId: user._id,
         name: user.name,
         email: user.email,
-        role: user.role,
-        accessToken,
-        sessionId, // needed for logout / session tracking
+        role: user.role
       },
     });
   } catch (err) {
@@ -93,11 +92,15 @@ export const refreshToken = async (req, res) => {
     }
 
     // Call service
-    const { accessToken, refreshToken: newRefreshToken, sessionId, userId } = refreshTokenService(refreshTokenCookie);
+<<<<<<< HEAD
+    const { accessToken, refreshToken: newRefreshToken} = refreshTokenService(refreshTokenCookie);
+=======
+    const { accessToken, refreshToken } = await refreshTokenService(refreshTokenCookie);
+>>>>>>> origin/main
 
     // Set new refresh token in HTTP-only cookie
     const refreshTtlSeconds = parseExpiresToSeconds(process.env.JWT_REFRESH_EXPIRES);
-    setCookie(res, "refreshToken", newRefreshToken, refreshTtlSeconds);
+    setCookie(res, "refreshToken", refreshToken, refreshTtlSeconds);
 
     // Set new access token in HTTP-only cookie
     const accessTtlSeconds = parseExpiresToSeconds(process.env.JWT_ACCESS_EXPIRES);
@@ -109,6 +112,7 @@ export const refreshToken = async (req, res) => {
       message: "Token refreshed successfully"
     });
   } catch (err) {
+    console.log(err)
     //TODO centralized error handling
     res.status(401).json({ success: false, message: err.message });
   }
@@ -122,15 +126,16 @@ export const refreshToken = async (req, res) => {
  */
 export const logout = async (req, res) => {
   try {
-    const refreshToken = req.cookies.refreshToken;
-    if (!refreshToken) {
+    const refreshTokenCookie = req.cookies.refreshToken;
+    if (!refreshTokenCookie) {
       return res.status(400).json({ success: false, message: "No refresh token found" });
     }
     
-    await logoutService(refreshToken);
+    await logoutService(refreshTokenCookie);
 
     // Clear cookie
     clearCookie(res, "refreshToken");
+    clearCookie(res, "accessToken");
 
     res.json({ success: true, message: "Logged out from current session" });
   } catch (err) {
@@ -146,18 +151,18 @@ export const logout = async (req, res) => {
  */
 export const logoutAll = async (req, res) => {
   try {
-    const refreshToken = req.cookies.refreshToken;
+    const refreshTokenCookie = req.cookies.refreshToken;
 
-    if (!refreshToken) {
+    if (!refreshTokenCookie) {
       return res.status(400).json({ success: false, message: "No refresh token found" });
     }
 
     // Call service to delete all sessions
-
-    await logoutAllService(userId);
+    await logoutAllService(refreshTokenCookie);
 
     // Clear cookie
     clearCookie(res, "refreshToken");
+    clearCookie(res, "accessToken");
 
     res.json({ success: true, message: "Logged out from all devices" });
 

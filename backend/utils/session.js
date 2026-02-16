@@ -41,7 +41,7 @@ export const deleteAllSessions = async (userId) => {
   for await (const key of redisClient.scanIterator({ MATCH: pattern })) {
     keys.push(key);
   }
-  if (keys.length > 0) await redisClient.del(keys);
+  if (keys.length > 0) await redisClient.del(...keys);
 };
 
 

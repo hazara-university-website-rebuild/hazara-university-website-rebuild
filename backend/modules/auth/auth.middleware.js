@@ -19,7 +19,7 @@ export const protect = (req, res, next) => {
 
     // 4️⃣ Attach user info to request
     req.user = {
-      id: payload.id,
+      id: payload.userId,
       role: payload.role,
     };
 
