@@ -8,6 +8,8 @@ import newsRoutes from "./modules/news/news.routes.js";
 // 1. Import the Slider Routes
 import sliderRoutes from "./modules/slider/slider.routes.js";
 import highlightRoutes from "./modules/highlights/highlight.routes.js";
+import vcRoutes from "./modules/vcMessage/vc.routes.js";
+
 dotenv.config();
 // Connect Database
 await connectDB();
@@ -24,6 +26,8 @@ app.use("/api/news", newsRoutes);
 app.use("/api/slider", sliderRoutes);
 // Important highlights route
 app.use("/api/highlights", highlightRoutes);
+// VC Message Route
+app.use("/api/vc-message", vcRoutes);
 
 app.get("/", (req, res) => {
   res.send("API Running");
