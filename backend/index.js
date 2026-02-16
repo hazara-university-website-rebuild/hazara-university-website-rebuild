@@ -5,6 +5,8 @@ import connectDB from "./config/db.js";
 import { connectRedis } from "./config/redis.js";
 import authRoutes from "./modules/auth/auth.routes.js";
 import newsRoutes from "./modules/news/news.routes.js";
+// 1. Import the Slider Routes
+import sliderRoutes from "./modules/slider/slider.routes.js";
 dotenv.config();
 // Connect Database
 await connectDB();
@@ -15,9 +17,10 @@ const app = express();
 app.use(express.json());
 app.use(cookieParser());
 app.use("/api/auth", authRoutes);
-
 // news route
 app.use("/api/news", newsRoutes);
+// Slider route
+app.use("/api/slider", sliderRoutes);
 
 app.get("/", (req, res) => {
   res.send("API Running");
