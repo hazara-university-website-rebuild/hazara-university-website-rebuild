@@ -7,6 +7,7 @@ import authRoutes from "./modules/auth/auth.routes.js";
 import newsRoutes from "./modules/news/news.routes.js";
 // 1. Import the Slider Routes
 import sliderRoutes from "./modules/slider/slider.routes.js";
+import highlightRoutes from "./modules/highlights/highlight.routes.js";
 dotenv.config();
 // Connect Database
 await connectDB();
@@ -21,6 +22,8 @@ app.use("/api/auth", authRoutes);
 app.use("/api/news", newsRoutes);
 // Slider route
 app.use("/api/slider", sliderRoutes);
+// Important highlights route
+app.use("/api/highlights", highlightRoutes);
 
 app.get("/", (req, res) => {
   res.send("API Running");
