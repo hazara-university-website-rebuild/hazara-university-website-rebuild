@@ -4,8 +4,11 @@ export const upsertVCMessage = async (data) => {
   // We can choose to update the existing one or create a new one
   return await VCMessage.findOneAndUpdate(
     { isActive: true }, 
-    data, 
-    { upsert: true, new: true }
+      data, 
+    { 
+      upsert: true,
+      returnDocument: "after" 
+    }
   );
 };
 

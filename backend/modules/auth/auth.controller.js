@@ -1,6 +1,5 @@
 import { logoutService, logoutAllService, register,refreshTokenService,login } from "./auth.service.js";
 import { 
-  asyncHandler,
   setCookie,
   clearCookie,
   parseExpiresToSeconds,
@@ -11,7 +10,7 @@ import { InvalidTokenError, UnauthorizedError } from "../../errors/index.js";
  * Register User Controller
  * Validation is handled by middleware
  */
-export const registerUser = asyncHandler( async (req, res) => {
+export const registerUser = async (req, res) => {
     const { name, email, password } = req.body;
 
     // Call register service
@@ -35,14 +34,14 @@ export const registerUser = asyncHandler( async (req, res) => {
         role: user.role
       },
     });
-})
+}
 
 
 /**
  * Login User Controller
  * Validation is handled by middleware
  */
-export const loginUser = asyncHandler( async (req, res) => {
+export const loginUser =  async (req, res) => {
     const { email, password } = req.body;
 
     // Call login service
@@ -66,7 +65,7 @@ export const loginUser = asyncHandler( async (req, res) => {
         role: user.role
       },
     });
-})
+}
 
 
 
@@ -74,7 +73,7 @@ export const loginUser = asyncHandler( async (req, res) => {
  * Refresh access token controller
  * Reads refresh token from HTTP-only cookie
  */
-export const refreshToken = asyncHandler( async (req, res) => {
+export const refreshToken = async (req, res) => {
   const refreshTokenCookie = req.cookies.refreshToken;
 
   //TODO centralized error handling
@@ -96,7 +95,7 @@ export const refreshToken = asyncHandler( async (req, res) => {
     success: true,
     message: "Token refreshed successfully"
   });
-})
+}
 
 
 
@@ -104,7 +103,7 @@ export const refreshToken = asyncHandler( async (req, res) => {
  * Logout from current device/session
  * Expects: refreshToken in cookie
  */
-export const logout = asyncHandler( async (req, res) => {
+export const logout = async (req, res) => {
   const refreshTokenCookie = req.cookies.refreshToken;
   if (!refreshTokenCookie) throw new InvalidTokenError("No refresh token found");
   
@@ -115,15 +114,13 @@ export const logout = asyncHandler( async (req, res) => {
   clearCookie(res, "accessToken");
 
   res.json({ success: true, message: "Logged out from current session" });
-})
-
-
+}
 
 /**
  * Logout from all devices (delete all sessions)
  * Expects: userId in request (from decoded token or client)
  */
-export const logoutAll = asyncHandler( async (req, res) => {
+export const logoutAll = async (req, res) => {
   const refreshTokenCookie = req.cookies.refreshToken;
 
   if (!refreshTokenCookie) throw new InvalidTokenError("No refresh token found");
@@ -136,4 +133,4 @@ export const logoutAll = asyncHandler( async (req, res) => {
   clearCookie(res, "accessToken");
 
   res.json({ success: true, message: "Logged out from all devices" });
-})
+}
