@@ -1,6 +1,12 @@
 import User from "../../models/User.model.js";
 import { verifyRefreshToken, generateAccessToken, generateRefreshToken, parseExpiresToSeconds } from "../../utils/token.js";
 import { generateSessionId,saveSession,getSession,deleteAllSessions,deleteSession } from "../../utils/session.js";
+import {
+  ConflictError,
+  UnauthorizedError,
+  NotFoundError
+} from "../../errors/Http.error.js";
+
 
 /**
  * Register a new user and create session
@@ -15,7 +21,8 @@ export const register = async (name, email, password) => {
   const existingUser = await User.findOne({ email });
 
   // TODO proper error handling
-  if (existingUser) throw new Error("Email is already registered");
+    if (existingUser)
+    throw new ConflictError("Email already registered");
 
   const user = await User.create({ name, email, password});
 
@@ -45,11 +52,13 @@ export const register = async (name, email, password) => {
 export const login = async (email, password) => {
   // 1️⃣ Find user by email
   const user = await User.findOne({ email }).select("+password"); // make sure password is selected
-  if (!user) throw new Error("Invalid credentials");
+  if (!user)
+    throw new UnauthorizedError("Invalid credentials");
 
   // 2️⃣ Compare password
   const isMatch = await user.comparePassword(password);
-  if (!isMatch) throw new Error("Invalid credentials");
+  if (!user)
+    throw new UnauthorizedError("Invalid credentials");
 
   const sessionId = generateSessionId();
   // 3️⃣ Generate access token
@@ -70,31 +79,44 @@ export const login = async (email, password) => {
 
 /**
  * Refresh Token Service
- * @param {string} refreshToken
+ * @param {string} refreshTokenCookie
  * @returns {Object} { accessToken, refreshToken, sessionId, userId }
  */
 export const refreshTokenService = async (refreshTokenCookie) => {
-    // 1️⃣ Verify refresh token
-    const { userId, role, sessionId } = verifyRefreshToken(refreshTokenCookie);
+if (!refreshTokenCookie)
+    throw new UnauthorizedError(
+      "Refresh token missing"
+    );
 
-    // 2️⃣ Check Redis for valid session
-    const storedToken = await getSession(userId, sessionId);
-    if (!storedToken || storedToken !== refreshTokenCookie) {
-      throw new Error("Invalid or expired session");
-    }
+  // 1️⃣ Verify refresh token
+  const { userId, role, sessionId } = verifyRefreshToken(refreshTokenCookie);
 
-    // 3️⃣ Generate new tokens
-    const newAccessToken = generateAccessToken(userId,role); // add role if needed
-    const newRefreshToken = generateRefreshToken(userId,role, sessionId );
+  // 2️⃣ Check Redis for valid session
+  const storedToken = await getSession(userId, sessionId);
 
-    // 4️⃣ Store new refresh token in Redis (rotate token)
-    const ttl = parseExpiresToSeconds(process.env.JWT_REFRESH_EXPIRES);
-    await saveSession(userId, sessionId, newRefreshToken, ttl);
 
-    return {
-      accessToken: newAccessToken,
-      refreshToken: newRefreshToken
-    };
+  if (!storedToken)
+    throw new UnauthorizedError(
+      "Session expired"
+    );
+
+  if (storedToken !== refreshTokenCookie)
+    throw new UnauthorizedError(
+      "Invalid session"
+    );
+
+  // 3️⃣ Generate new tokens
+  const newAccessToken = generateAccessToken(userId,role); // add role if needed
+  const newRefreshToken = generateRefreshToken(userId,role, sessionId );
+
+  // 4️⃣ Store new refresh token in Redis (rotate token)
+  const ttl = parseExpiresToSeconds(process.env.JWT_REFRESH_EXPIRES);
+  await saveSession(userId, sessionId, newRefreshToken, ttl);
+
+  return {
+    accessToken: newAccessToken,
+    refreshToken: newRefreshToken
+  };
 };
 
 
@@ -103,27 +125,27 @@ export const refreshTokenService = async (refreshTokenCookie) => {
 
 /**
  * Logout from current session
- * @param {string} refreshToken
+ * @param {string} refreshTokenCookie
  */
 export const logoutService = async (refreshTokenCookie) => {
-  try {
-    const payload = verifyRefreshToken(refreshTokenCookie);
-    const {userId,role, sessionId} = payload;
-    await deleteSession(userId, sessionId);
-  } catch (err) {
-    throw new Error("Invalid refresh token");
-  }
+  if (!refreshTokenCookie)
+      throw new UnauthorizedError(
+        "Refresh token missing"
+      );
+  const payload = verifyRefreshToken(refreshTokenCookie);
+  const {userId,role, sessionId} = payload;
+  await deleteSession(userId, sessionId);
 };
 
 /**
  * Logout from all sessions
- * @param {string} refreshToken
+ * @param {string} refreshTokenCookie
  */
 export const logoutAllService = async (refreshTokenCookie) => {
-  try {
-    const {userId} = verifyRefreshToken(refreshTokenCookie);
-    await deleteAllSessions(userId);
-  } catch (err) {
-    throw new Error("Invalid refresh token");
-  }
+  if (!refreshTokenCookie)
+    throw new UnauthorizedError(
+      "Refresh token missing"
+    );
+  const {userId} = verifyRefreshToken(refreshTokenCookie);
+  await deleteAllSessions(userId);
 };

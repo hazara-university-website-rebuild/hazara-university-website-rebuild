@@ -1,64 +1,141 @@
 import jwt from "jsonwebtoken";
+import {
+  InvalidTokenError,
+  TokenExpiredError,InternalServerError
+} from "../errors/Http.error.js";
 
-/**
- * Generate JWT Access Token
- * @param {Object} payload - data to encode
- */
-export const generateAccessToken = (userId,role) => {
-  return jwt.sign({
-    userId,
-    role
-  }, process.env.JWT_ACCESS_SECRET, {
-    expiresIn: process.env.JWT_ACCESS_EXPIRES || "15m",
-  });
+
+export const generateAccessToken =
+  (userId, role) => {
+
+    if (!process.env.JWT_ACCESS_SECRET)
+      throw new Error("JWT_ACCESS_SECRET not configured");
+
+    if (!userId)
+      throw new Error("userId required for token");
+
+    return jwt.sign(
+      { userId, role },
+      process.env.JWT_ACCESS_SECRET,
+      {
+        expiresIn:
+          process.env.JWT_ACCESS_EXPIRES || "15m",
+      }
+    );
 };
 
 
-/**
- * Generate JWT Refresh Token
- * @param {Object} payload - data to encode
- */
-export const generateRefreshToken = (userId, role, sessionId) => {
-  return jwt.sign({
-    userId,
-    role,
-    sessionId
-  }, process.env.JWT_REFRESH_SECRET, {
-    expiresIn: process.env.JWT_REFRESH_EXPIRES || "7d",
-  });
+export const generateRefreshToken =
+  (userId, role,sessionId) => {
+
+    if (!process.env.JWT_REFRESH_SECRET)
+      throw new Error("JWT_REFRESH_SECRET not configured");
+
+    if (!userId)
+      throw new Error("userId required for token");
+
+    return jwt.sign(
+      { userId, role,sessionId },
+      process.env.JWT_REFRESH_SECRET,
+      {
+        expiresIn:
+          process.env.JWT_REFRESH_EXPIRES || "15m",
+      }
+    );
 };
 
-
-/**
- * Verify access token
- * @param {string} token
- */
 export const verifyAccessToken = (token) => {
-  const secret = process.env.JWT_ACCESS_SECRET;
-  return jwt.verify(token, secret);
+
+  if (!token)
+    throw new InvalidTokenError("Access token missing");
+
+  try {
+
+    const secret =
+      process.env.JWT_ACCESS_SECRET;
+
+    return jwt.verify(token, secret);
+
+  } catch (err) {
+
+    if (err.name === "TokenExpiredError")
+      throw new TokenExpiredError("Access token expired");
+
+    if (err.name === "JsonWebTokenError")
+      throw new InvalidTokenError("Invalid access token");
+
+    if (err.name === "NotBeforeError")
+      throw new InvalidTokenError("Token not active");
+
+    throw new InvalidTokenError("Token verification failed");
+
+  }
 };
 
 
 /**
  * Verify refresh token
  * @param {string} token
+ * @returns {object} payload
  */
 export const verifyRefreshToken = (token) => {
-  const secret = process.env.JWT_REFRESH_SECRET;
-  return jwt.verify(token, secret);
+
+  if (!token)
+    throw new InvalidTokenError("Refresh token missing");
+
+  try {
+
+    const secret =
+      process.env.JWT_REFRESH_SECRET;
+
+    return jwt.verify(token, secret);
+
+  } catch (err) {
+
+    if (err.name === "TokenExpiredError") {
+      throw new TokenExpiredError("Refresh token expired");
+    }
+
+    if (err.name === "JsonWebTokenError") {
+      throw new InvalidTokenError("Invalid refresh token");
+    }
+
+    if (err.name === "NotBeforeError") {
+      throw new InvalidTokenError("Token not active");
+    }
+
+    throw new InvalidTokenError("Token verification failed");
+
+  }
 };
 
+export const parseExpiresToSeconds =
+  (expires) => {
 
-/**
- * helper for TTL fields Convert String to seconds
- * @param {string} expires
- */
+    if (!expires)
+      throw new InternalServerError(
+        "Expiration value missing"
+      );
 
-export const parseExpiresToSeconds = (expires) => {
-  const num = parseInt(expires);
-  if (expires.includes("d")) return num * 24 * 60 * 60;
-  if (expires.includes("h")) return num * 60 * 60;
-  if (expires.includes("m")) return num * 60;
-  if (expires.includes("s")) return num;
-  return num; // default seconds
+    const num = parseInt(expires);
+
+    if (isNaN(num))
+      throw new InternalServerError(
+        "Invalid expiration format"
+      );
+
+    if (expires.endsWith("d"))
+      return num * 86400;
+
+    if (expires.endsWith("h"))
+      return num * 3600;
+
+    if (expires.endsWith("m"))
+      return num * 60;
+
+    if (expires.endsWith("s"))
+      return num;
+
+    return num;
 };
+

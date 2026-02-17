@@ -1,13 +1,16 @@
 import { logoutService, logoutAllService, register,refreshTokenService,login } from "./auth.service.js";
-import { setCookie, clearCookie} from "../../utils/cookie.js";
-import { parseExpiresToSeconds } from "../../utils/token.js"
+import { 
+  asyncHandler,
+  setCookie,
+  clearCookie,
+  parseExpiresToSeconds,
+ } from "../../utils/index.js";
 
 /**
  * Register User Controller
  * Validation is handled by middleware
  */
-export const registerUser = async (req, res) => {
-  try {
+export const registerUser = asyncHandler( async (req, res) => {
     const { name, email, password } = req.body;
 
     // Call register service
@@ -31,19 +34,14 @@ export const registerUser = async (req, res) => {
         role: user.role
       },
     });
-  } catch (err) {
-    // TODO implement proper error handling using globle error handler
-    res.status(400).json({ success: false, message: err.message });
-  }
-};
+})
 
 
 /**
  * Login User Controller
  * Validation is handled by middleware
  */
-export const loginUser = async (req, res) => {
-  try {
+export const loginUser = asyncHandler( async (req, res) => {
     const { email, password } = req.body;
 
     // Call login service
@@ -67,14 +65,7 @@ export const loginUser = async (req, res) => {
         role: user.role
       },
     });
-  } catch (err) {
-
-    //TODO error handling
-    // You can differentiate invalid credentials (401) vs server errors (500)
-    const statusCode = err.message === "Invalid credentials" ? 401 : 400;
-    res.status(statusCode).json({ success: false, message: err.message });
-  }
-};
+})
 
 
 
@@ -82,41 +73,31 @@ export const loginUser = async (req, res) => {
  * Refresh access token controller
  * Reads refresh token from HTTP-only cookie
  */
-export const refreshToken = async (req, res) => {
-  try {
-    const refreshTokenCookie = req.cookies.refreshToken;
+export const refreshToken = asyncHandler( async (req, res) => {
+  const refreshTokenCookie = req.cookies.refreshToken;
 
-    //TODO centralized error handling
-    if (!refreshTokenCookie) {
-      return res.status(401).json({ success: false, message: "" });
-    }
-
-    // Call service
-<<<<<<< HEAD
-    const { accessToken, refreshToken: newRefreshToken} = refreshTokenService(refreshTokenCookie);
-=======
-    const { accessToken, refreshToken } = await refreshTokenService(refreshTokenCookie);
->>>>>>> origin/main
-
-    // Set new refresh token in HTTP-only cookie
-    const refreshTtlSeconds = parseExpiresToSeconds(process.env.JWT_REFRESH_EXPIRES);
-    setCookie(res, "refreshToken", refreshToken, refreshTtlSeconds);
-
-    // Set new access token in HTTP-only cookie
-    const accessTtlSeconds = parseExpiresToSeconds(process.env.JWT_ACCESS_EXPIRES);
-    setCookie(res, "accessToken", accessToken, accessTtlSeconds);
-
-    // Return new access token
-    res.json({
-      success: true,
-      message: "Token refreshed successfully"
-    });
-  } catch (err) {
-    console.log(err)
-    //TODO centralized error handling
-    res.status(401).json({ success: false, message: err.message });
+  //TODO centralized error handling
+  if (!refreshTokenCookie) {
+    return res.status(401).json({ success: false, message: "" });
   }
-};
+
+  // Call service
+  const { accessToken, refreshToken } = await refreshTokenService(refreshTokenCookie);
+
+  // Set new refresh token in HTTP-only cookie
+  const refreshTtlSeconds = parseExpiresToSeconds(process.env.JWT_REFRESH_EXPIRES);
+  setCookie(res, "refreshToken", refreshToken, refreshTtlSeconds);
+
+  // Set new access token in HTTP-only cookie
+  const accessTtlSeconds = parseExpiresToSeconds(process.env.JWT_ACCESS_EXPIRES);
+  setCookie(res, "accessToken", accessToken, accessTtlSeconds);
+
+  // Return new access token
+  res.json({
+    success: true,
+    message: "Token refreshed successfully"
+  });
+})
 
 
 
@@ -124,24 +105,20 @@ export const refreshToken = async (req, res) => {
  * Logout from current device/session
  * Expects: refreshToken in cookie
  */
-export const logout = async (req, res) => {
-  try {
-    const refreshTokenCookie = req.cookies.refreshToken;
-    if (!refreshTokenCookie) {
-      return res.status(400).json({ success: false, message: "No refresh token found" });
-    }
-    
-    await logoutService(refreshTokenCookie);
-
-    // Clear cookie
-    clearCookie(res, "refreshToken");
-    clearCookie(res, "accessToken");
-
-    res.json({ success: true, message: "Logged out from current session" });
-  } catch (err) {
-    res.status(400).json({ success: false, message: err.message });
+export const logout = asyncHandler( async (req, res) => {
+  const refreshTokenCookie = req.cookies.refreshToken;
+  if (!refreshTokenCookie) {
+    return res.status(400).json({ success: false, message: "No refresh token found" });
   }
-};
+  
+  await logoutService(refreshTokenCookie);
+
+  // Clear cookie
+  clearCookie(res, "refreshToken");
+  clearCookie(res, "accessToken");
+
+  res.json({ success: true, message: "Logged out from current session" });
+})
 
 
 
@@ -149,26 +126,19 @@ export const logout = async (req, res) => {
  * Logout from all devices (delete all sessions)
  * Expects: userId in request (from decoded token or client)
  */
-export const logoutAll = async (req, res) => {
-  try {
-    const refreshTokenCookie = req.cookies.refreshToken;
+export const logoutAll = asyncHandler( async (req, res) => {
+  const refreshTokenCookie = req.cookies.refreshToken;
 
-    if (!refreshTokenCookie) {
-      return res.status(400).json({ success: false, message: "No refresh token found" });
-    }
-
-    // Call service to delete all sessions
-    await logoutAllService(refreshTokenCookie);
-
-    // Clear cookie
-    clearCookie(res, "refreshToken");
-    clearCookie(res, "accessToken");
-
-    res.json({ success: true, message: "Logged out from all devices" });
-
-  } catch (err) {
-    //TODO centralized error handling
-    res.status(400).json({ success: false, message: err.message });
-
+  if (!refreshTokenCookie) {
+    return res.status(400).json({ success: false, message: "No refresh token found" });
   }
-};
+
+  // Call service to delete all sessions
+  await logoutAllService(refreshTokenCookie);
+
+  // Clear cookie
+  clearCookie(res, "refreshToken");
+  clearCookie(res, "accessToken");
+
+  res.json({ success: true, message: "Logged out from all devices" });
+})

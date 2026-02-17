@@ -1,4 +1,5 @@
 import { createClient } from "redis";
+import { DatabaseError } from "../errors/index.js";
 
 const redisClient = createClient({
   socket: {
@@ -8,19 +9,14 @@ const redisClient = createClient({
   password: process.env.REDIS_PASSWORD || undefined,
 });
 
-redisClient.on("connect", () => {
-  console.log("Redis Connected");
-});
-
-redisClient.on("error", (err) => {
-  console.error("Redis Error:", err.message);
-});
+redisClient.on("connect", () => console.log("Redis Connected"));
+redisClient.on("error", (err) => console.error("Redis Error:", err.message));
 
 const connectRedis = async () => {
   try {
     await redisClient.connect();
   } catch (error) {
-    console.error("Redis connection failed:", error.message);
+    throw new DatabaseError(`Redis connection failed: ${error.message}`);
   }
 };
 
