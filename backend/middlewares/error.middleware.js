@@ -1,5 +1,3 @@
-// src/middlewares/errorMiddleware.js
-
 import { AppError } from "../errors/index.js";
 
 export const errorMiddleware = (err, req, res, next) => {

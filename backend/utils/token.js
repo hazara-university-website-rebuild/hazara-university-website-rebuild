@@ -2,7 +2,7 @@ import jwt from "jsonwebtoken";
 import {
   InvalidTokenError,
   TokenExpiredError,InternalServerError
-} from "../errors/Http.error.js";
+} from "../errors/index.js";
 
 
 export const generateAccessToken =

@@ -5,7 +5,7 @@ import {
   ConflictError,
   UnauthorizedError,
   NotFoundError
-} from "../../errors/Http.error.js";
+} from "../../errors/index.js";
 
 
 /**
@@ -21,7 +21,7 @@ export const register = async (name, email, password) => {
   const existingUser = await User.findOne({ email });
 
   // TODO proper error handling
-    if (existingUser)
+  if (existingUser)
     throw new ConflictError("Email already registered");
 
   const user = await User.create({ name, email, password});

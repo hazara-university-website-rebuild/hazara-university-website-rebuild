@@ -1,4 +1,5 @@
-import { verifyAccessToken } from "../../utils/token";
+import { verifyAccessToken } from "../../utils/index.js";
+import { UnauthorizedError, ForbiddenError } from "../../errors/index.js";
 
 /**
  * Middleware to protect routes
@@ -6,29 +7,20 @@ import { verifyAccessToken } from "../../utils/token";
  * Attaches decoded payload to req.user
  */
 export const protect = (req, res, next) => {
-  try {
+  const token = req.cookies.accessToken;
+  if (!token)
+    throw new UnauthorizedError("Access token missing");
 
-    const token = req.cookies.accessToken;
+  // Verify token
+  const payload = verifyAccessToken(token);
 
-    if (!token) {
-      return res.status(401).json({ success: false, message: "Access token missing" });
-    }
+  // Attach user info to request
+  req.user = {
+    id: payload.userId,
+    role: payload.role,
+  };
 
-    // 3️⃣ Verify token
-    const payload = verifyAccessToken(token);
-
-    // 4️⃣ Attach user info to request
-    req.user = {
-      id: payload.userId,
-      role: payload.role,
-    };
-
-    next();
-  } catch (err) {
-
-    return res.status(401).json({ success: false, message: "Invalid or expired access token" });
-
-  }
+  next();
 };
 
 
@@ -40,7 +32,7 @@ export const protect = (req, res, next) => {
 export const restrictTo = (...roles) => {
   return (req, res, next) => {
     if (!req.user || !roles.includes(req.user.role)) {
-      return res.status(403).json({ success: false, message: "Access forbidden: insufficient permissions" });
+      throw new ForbiddenError("Access forbidden: insufficient permissions");
     }
     next();
   };

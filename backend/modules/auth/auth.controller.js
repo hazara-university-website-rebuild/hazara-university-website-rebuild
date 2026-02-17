@@ -5,6 +5,7 @@ import {
   clearCookie,
   parseExpiresToSeconds,
  } from "../../utils/index.js";
+import { InvalidTokenError, UnauthorizedError } from "../../errors/index.js";
 
 /**
  * Register User Controller
@@ -77,9 +78,7 @@ export const refreshToken = asyncHandler( async (req, res) => {
   const refreshTokenCookie = req.cookies.refreshToken;
 
   //TODO centralized error handling
-  if (!refreshTokenCookie) {
-    return res.status(401).json({ success: false, message: "" });
-  }
+  if (!refreshTokenCookie) throw new UnauthorizedError("Refresh token missing");
 
   // Call service
   const { accessToken, refreshToken } = await refreshTokenService(refreshTokenCookie);
@@ -107,9 +106,7 @@ export const refreshToken = asyncHandler( async (req, res) => {
  */
 export const logout = asyncHandler( async (req, res) => {
   const refreshTokenCookie = req.cookies.refreshToken;
-  if (!refreshTokenCookie) {
-    return res.status(400).json({ success: false, message: "No refresh token found" });
-  }
+  if (!refreshTokenCookie) throw new InvalidTokenError("No refresh token found");
   
   await logoutService(refreshTokenCookie);
 
@@ -129,9 +126,7 @@ export const logout = asyncHandler( async (req, res) => {
 export const logoutAll = asyncHandler( async (req, res) => {
   const refreshTokenCookie = req.cookies.refreshToken;
 
-  if (!refreshTokenCookie) {
-    return res.status(400).json({ success: false, message: "No refresh token found" });
-  }
+  if (!refreshTokenCookie) throw new InvalidTokenError("No refresh token found");
 
   // Call service to delete all sessions
   await logoutAllService(refreshTokenCookie);
