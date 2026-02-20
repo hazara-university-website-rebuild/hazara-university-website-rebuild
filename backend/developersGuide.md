@@ -144,11 +144,19 @@ Example — Controller:
 import { asyncHandler } from "../utils/index.js";
 import { loginService } from "../modules/auth/auth.service.js";
 
-export const loginController = asyncHandler(async (req, res) => {
+export const loginController = asychHandler( async (req, res) => {
   const { email, password } = req.body;
   const result = await loginService(email, password);
   res.json(result);
 });
+```
+
+OR even better
+
+when registerring a controller use it there
+
+```javascript
+router.get("/",asyncHandler(controller))
 ```
 
 **Error Flow:**
